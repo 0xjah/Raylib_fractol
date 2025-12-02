@@ -11,7 +11,7 @@ MAIN := mandelbrot
 $(MAIN):$(OBJ)
 	$(CC) $(CFLAGS) -o $(MAIN) $(OBJ) $(LIBS)
 
-$(OBJ):$(SRC)
+$(OBJ):$(SRC) mandelbrot.h
 	$(CC) $(CFLAGS) -c $(SRC) -o $(OBJ) $(LIBS)
 
 

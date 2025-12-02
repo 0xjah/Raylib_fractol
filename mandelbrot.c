@@ -1,43 +1,11 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include<math.h>
-#include<complex.h>
-#include<raylib.h>
-
-#define SCREEN_WIDTH 800
-#define SCREEN_HEIGHT 800
-#define MAX_ITER 1000
-
-static Color gruvbox_colors[] = {
-    {29, 32, 33, 255},      
-    {40, 40, 40, 255},      
-    {60, 56, 54, 255},      
-    {80, 73, 69, 255},      
-    {102, 92, 84, 255},     
-    {124, 111, 100, 255},   
-    {146, 131, 116, 255},   
-    {168, 153, 132, 255},   
-    {189, 174, 147, 255},   
-    {213, 196, 161, 255},   
-    {235, 219, 178, 255},   
-    {251, 241, 199, 255},   
-    {251, 73, 52, 255},     
-    {254, 128, 25, 255},    
-    {250, 189, 47, 255},    
-    {184, 187, 38, 255},    
-    {142, 192, 124, 255},   
-    {131, 165, 152, 255},   
-    {211, 134, 155, 255},   
-};
-
-#define NUM_GRUVBOX_COLORS (sizeof(gruvbox_colors) / sizeof(gruvbox_colors[0]))
+#include "mandelbrot.h"
 
 double mandelbrot_minX = -2;
 double mandelbrot_minY = -2;
-
 double mandelbrot_maxX = 2;
 double mandelbrot_maxY = 2;
-
+double max_iter = MAX_ITER;
+bool invert_colors = false;
 
 double map(double value, double min_input, double max_input, double min_output, double max_output){
   return (value - min_input) * (max_output - min_output) / (max_input - min_input) + min_output; 
@@ -47,7 +15,7 @@ void getMandelbrotSet(double complex z, double complex c, int *iter_count, Vecto
 
   if(cabs(z) > 2) return; //magnitude of the complex number, mag = sqrt(r**r + img**img)
   
-  if(*iter_count == MAX_ITER) return;
+  if(*iter_count == max_iter) return;
   
   double complex z_ = (z * z) + c;
   
@@ -61,7 +29,7 @@ int getIterationCount(double complex c){
   double complex z = 0.0 + 0.0 * I;
   int iter_cnt = -1; // if the iteration count goes beyond MAX_ITER
 
-  for(int i = 0; i < MAX_ITER; ++i){
+  for(int i = 0; i < max_iter; ++i){
     double complex z_ = (z * z) + c;
     z = z_;
     if(cabs(z) > 2) return i; //magnitude of the complex number, mag = sqrt(r**r + img**img)
@@ -88,10 +56,17 @@ Color getGruvboxColor(int iter_count, int max_iter){
 
 Color getGruvboxColorSmooth(int iter_count, int max_iter){
   if(iter_count == -1){
-    return (Color){29, 32, 33, 255}; // bg_h
+    // Points in the set
+    return invert_colors ? (Color){251, 241, 199, 255} : (Color){29, 32, 33, 255};
   }
   
   double ratio = (double)iter_count / (double)max_iter;
+  
+  // Invert ratio if invert_colors is true
+  if(invert_colors){
+    ratio = 1.0 - ratio;
+  }
+  
   double scaled = ratio * (NUM_GRUVBOX_COLORS - 1);
   int color_index = (int)scaled;
   double t = scaled - color_index;
@@ -132,7 +107,7 @@ void generateMandelbrotFractal(Color *pixels){
 
       int iter_count = getIterationCount(c);
       
-      Color color = getGruvboxColorSmooth(iter_count, MAX_ITER);
+      Color color = getGruvboxColorSmooth(iter_count, max_iter);
       
       pixels[i * SCREEN_WIDTH + j] = color;
     }
@@ -171,7 +146,7 @@ int main(void){
   double complex z = 0 + 0 * I;
 
   int iter_cnt = 0;
-  Vector2 points[MAX_ITER] = {0};
+  Vector2 *points = calloc(10000, sizeof(Vector2)); // Allocate enough for maximum iterations
 
   Color *pixels = calloc(SCREEN_HEIGHT * SCREEN_WIDTH, sizeof(Color));
 
@@ -224,16 +199,35 @@ int main(void){
         mandelbrot_maxY = 2;
         generateMandelbrotFractal(pixels);
       }
+      if(IsKeyPressed(KEY_I)){
+        // Increase max iterations
+        max_iter = max_iter + 500;
+        generateMandelbrotFractal(pixels);
+      }
+      if(IsKeyPressed(KEY_D)){
+        // Decrease max iterations (minimum 50)
+        if(max_iter > 50){
+          max_iter = max_iter - 500;
+          generateMandelbrotFractal(pixels);
+        }
+      }
+      if(IsKeyPressed(KEY_C)){
+        // Toggle color inversion
+        invert_colors = !invert_colors;
+        generateMandelbrotFractal(pixels);
+      }
       
       drawMandelbrotFractal(pixels);
       drawMandelbrotPoints(points,iter_cnt);
       
-      DrawText("UP: Zoom In | DOWN: Zoom Out | R: Reset | Click: Show Orbit", 10, 10, 15, gruvbox_fg);
+      DrawText("UP: Zoom In | DOWN: Zoom Out | R: Reset | I: More Detail | D: Less Detail | C: Invert Colors", 10, 10, 13, gruvbox_fg);
+      DrawText(TextFormat("Max Iterations: %d", (int)max_iter), 10, 30, 15, gruvbox_orange);
       
     EndDrawing();
   }
   
   free(pixels);
+  free(points);
   CloseWindow();
   
   return 0;
