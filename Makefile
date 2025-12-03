@@ -1,19 +1,20 @@
 CC := clang
-CCFLAGS := -Wall -Wextra
+CFLAGS := -Wall -Wextra
 
-LIBS := `pkg-config --libs --cflags raylib`
+# Only use cflags during compilation, libs during linking
+CFLAGS_COMPILE := $(shell pkg-config --cflags raylib)
+LIBS := $(shell pkg-config --libs raylib) -lm
 
 SRC := mandelbrot.c
 OBJ := mandelbrot.o
 MAIN := mandelbrot
 
+$(MAIN): $(OBJ)
+	$(CC) $(OBJ) -o $(MAIN) $(LIBS)
 
-$(MAIN):$(OBJ)
-	$(CC) $(CFLAGS) -o $(MAIN) $(OBJ) $(LIBS)
-
-$(OBJ):$(SRC) mandelbrot.h
-	$(CC) $(CFLAGS) -c $(SRC) -o $(OBJ) $(LIBS)
-
+$(OBJ): $(SRC) mandelbrot.h
+	$(CC) $(CFLAGS) $(CFLAGS_COMPILE) -c $(SRC) -o $(OBJ)
 
 clean:
-	rm $(OBJ); rm $(MAIN)
+	rm -f $(OBJ) $(MAIN)
+
